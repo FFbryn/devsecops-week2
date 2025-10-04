@@ -1,3 +1,7 @@
+import sys, os
+# Tambahkan path ke root repo supaya "src" bisa ditemukan
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from src.app import add, divide
 import pytest
 
