@@ -1,4 +1,4 @@
-import subprocess
+import subprocess #nosec
 import shlex
 
 def add(a, b):
@@ -19,5 +19,5 @@ def run_command_safe(cmd):
     if args and args[0] not in allowed_bins:
         raise ValueError("Perintah tidak diizinkan")
 
-    result = subprocess.run(args, capture_output=True, text=True)
+    result = subprocess.run(args, capture_output=True, text=True) #nosec
     return result.stdout
