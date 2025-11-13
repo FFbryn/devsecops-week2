@@ -1,49 +1,44 @@
 pipeline {
-  agent {
-    docker {
-      image 'python:3.10'
-      args '-u root:root' // optional: jalankan sebagai root supaya bisa install jika perlu
-    }
-  }
+  agent any
 
   stages {
     stage('Checkout') {
-      steps { checkout scm }
+      steps {
+        checkout scm
+      }
     }
 
-    stage('Setup') {
+    stage('Build') {
       steps {
-        sh 'python --version'
-        sh 'pip --version'
-        // buat virtualenv opsional, tapi cukup install paket di lingkungan container
-        sh 'pip install --upgrade pip'
-        sh 'pip install -r requirements.txt || true'
-        sh 'pip install pytest bandit junit-xml || true'
+        echo 'Building project...'
       }
     }
 
     stage('Test') {
       steps {
-        sh 'pytest --junitxml=reports/results.xml || true'
-      }
-      post {
-        always {
-          junit allowEmptyResults: true, testResults: 'reports/results.xml'
-        }
+        sh 'pytest'
       }
     }
 
     stage('Security Scan') {
       steps {
-        sh 'bandit -r . -f xml -o reports/bandit.xml || true'
-        archiveArtifacts artifacts: 'reports/**', fingerprint: true
+        sh 'bandit -r .'
+      }
+    }
+
+    stage('Deploy') {
+      steps {
+        echo 'Deploying application to staging environment...'
       }
     }
   }
 
   post {
-    success { echo 'Pipeline sukses' }
-    failure { echo 'Pipeline gagal' }
+    success {
+      echo 'Pipeline completed successfully!'
+    }
+    failure {
+      echo 'Pipeline failed.'
+    }
   }
 }
-
