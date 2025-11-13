@@ -1,46 +1,52 @@
 pipeline {
-  agent any
-  tools { python 'python3' } // optional jika sudah terkonfigurasi di Jenkins
-  stages {
-    stage('Checkout') {
-      steps {
-        checkout scm
-      }
-    }
-    stage('Install Dependencies') {
-      steps {
-        sh '''
-          python3 -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          pip install pytest bandit
-        '''
-      }
-    }
-    stage('Unit Tests') {
-      steps {
-        sh 'pytest --maxfail=1 --disable-warnings -q'
-      }
-      post {
-        always {
-          junit '**/test-results/*.xml'  || echo 'junit not produced'
+    agent any
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main', url: 'https://github.com/FFbryn/devsecops-week2.git'
+            }
         }
-      }
+
+        stage('Build') {
+            steps {
+                sh 'echo "Building application..."'
+            }
+        }
+
+        stage('Test') {
+            steps {
+                sh '''
+                pip install -r requirements.txt
+                pip install pytest
+                pytest
+                '''
+            }
+        }
+
+        stage('Security Scan') {
+            steps {
+                sh '''
+                pip install bandit
+                bandit -r src
+                '''
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                sh 'echo "Deploying application to staging environment..."'
+            }
+        }
     }
-    stage('Security Scan') {
-      steps {
-        sh 'bandit -r . || true'
-      }
+
+    post {
+        success {
+            echo 'Pipeline executed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed!'
+        }
     }
-    stage('Deploy (simulate)') {
-      when { branch 'main' }
-      steps {
-        sh 'echo "Deploying to staging (simulated)..."'
-      }
-    }
-  }
-  post {
-    success { echo 'Pipeline succeeded' }
-    failure { echo 'Pipeline failed' }
-  }
 }
 
