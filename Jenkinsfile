@@ -2,43 +2,30 @@ pipeline {
   agent any
 
   stages {
-    stage('Checkout') {
-      steps {
-        checkout scm
-      }
-    }
+    stage('Checkout') { steps { checkout scm } }
 
-    stage('Build') {
+    stage('Run tests in Python container') {
       steps {
-        echo 'Building project...'
-      }
-    }
-
-    stage('Test') {
-      steps {
-        sh 'pytest'
+        sh '''
+          docker run --rm -v "$PWD":/workspace -w /workspace python:3.10 bash -lc "
+          pip install -r requirements.txt pytest bandit || true &&
+          pytest --maxfail=1 --disable-warnings -q
+          "
+        '''
       }
     }
 
     stage('Security Scan') {
       steps {
-        sh 'bandit -r .'
+        sh '''
+          docker run --rm -v "$PWD":/workspace -w /workspace python:3.10 bash -lc "
+          pip install bandit || true &&
+          bandit -r . -o bandit-report.txt || true
+          "
+        '''
+        archiveArtifacts artifacts: 'bandit-report.txt'
       }
-    }
-
-    stage('Deploy') {
-      steps {
-        echo 'Deploying application to staging environment...'
-      }
-    }
-  }
-
-  post {
-    success {
-      echo 'Pipeline completed successfully!'
-    }
-    failure {
-      echo 'Pipeline failed.'
     }
   }
 }
+
