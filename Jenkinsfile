@@ -1,31 +1,46 @@
 pipeline {
   agent any
-
+  tools { python 'python3' } // optional jika sudah terkonfigurasi di Jenkins
   stages {
-    stage('Checkout') { steps { checkout scm } }
-
-    stage('Run tests in Python container') {
+    stage('Checkout') {
+      steps {
+        checkout scm
+      }
+    }
+    stage('Install Dependencies') {
       steps {
         sh '''
-          docker run --rm -v "$PWD":/workspace -w /workspace python:3.10 bash -lc "
-          pip install -r requirements.txt pytest bandit || true &&
-          pytest --maxfail=1 --disable-warnings -q
-          "
+          python3 -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install pytest bandit
         '''
       }
     }
-
+    stage('Unit Tests') {
+      steps {
+        sh 'pytest --maxfail=1 --disable-warnings -q'
+      }
+      post {
+        always {
+          junit '**/test-results/*.xml'  || echo 'junit not produced'
+        }
+      }
+    }
     stage('Security Scan') {
       steps {
-        sh '''
-          docker run --rm -v "$PWD":/workspace -w /workspace python:3.10 bash -lc "
-          pip install bandit || true &&
-          bandit -r . -o bandit-report.txt || true
-          "
-        '''
-        archiveArtifacts artifacts: 'bandit-report.txt'
+        sh 'bandit -r . || true'
       }
     }
+    stage('Deploy (simulate)') {
+      when { branch 'main' }
+      steps {
+        sh 'echo "Deploying to staging (simulated)..."'
+      }
+    }
+  }
+  post {
+    success { echo 'Pipeline succeeded' }
+    failure { echo 'Pipeline failed' }
   }
 }
 
